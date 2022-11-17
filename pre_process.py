@@ -3,6 +3,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('omw-1.4')
+nltk.download('rslp')
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import train_test_split
@@ -11,10 +12,13 @@ import re
 import string
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+import spacy
+nlp = spacy.load("pt_core_news_sm")
 
 # ================================= DATASET =================================
 df = pd.read_csv("rumor-election-brazil-2018.csv",delimiter=";")
 df = df.dropna()
+# print(df.head(5))
 stop = stopwords.words('portuguese')
 # print(stop)
 list_stop_words = ['em','sao','ao','de','da','do','para','c','kg','un',
@@ -24,7 +28,7 @@ list_stop_words = ['em','sao','ao','de','da','do','para','c','kg','un',
               'h','i','j','k','l','m','n','o','p','q','r','s','t',
               'u','v','x','w','y','z']
 
-#================================== PRÉ PROCESSAMENTO ===================================
+#================================== PRÉ PROCESSAMENTO =================================== Não seria interessante preservar os números?
 def processa_texto(text):
     text = str(text).lower() 
     text = re.sub('\[.*?\]','', text)
@@ -37,10 +41,7 @@ def processa_texto(text):
 
 df["texto"] = df["texto"].apply(processa_texto)
 
-#STOPWORDS
-df['texto'] = df['texto'].apply(lambda x: ' '.join([word for word in x.split() if word not in (list_stop_words)]))
-
-#LEMATIZAÇÃO
+# LEMATIZAÇÃO
 def lemmatize_words(text):
     wnl = nltk.stem.WordNetLemmatizer()
     lem = ' '.join([wnl.lemmatize(word) for word in text.split()])
@@ -50,14 +51,16 @@ df['texto'] = df['texto'].apply(lemmatize_words)
 
 #TOKENIZAÇÃO
 # print(nltk.word_tokenize(df['texto'][0]))
-cvt = CountVectorizer(strip_accents='ascii', lowercase=True) # strip_accents: Remove acentuação
+cvt = CountVectorizer(strip_accents='ascii', lowercase=True, stop_words=list_stop_words) #acentos, minúsculas, stopwords
 tokens = cvt.fit_transform(df['texto']) # Transformação em vetor binário
 tokens = tokens.toarray()
 # print(tokens)
- 
+print(cvt.get_feature_names())
+print(len(cvt.get_feature_names())) #1864 palavras
+
 #TF-IDF
-metodo = TfidfTransformer(use_idf=True) # use_idf: Opção de normalização tf-idf
-td_idf = metodo.fit_transform(tokens) # Transformação com normalização tf-idf
+tf_transformer = TfidfTransformer(use_idf=True) # use_idf: Opção de normalização tf-idf
+td_idf = tf_transformer.fit_transform(tokens) # Transformação com normalização tf-idf
 td_idf = td_idf.toarray()
 # print(td_idf)
 
